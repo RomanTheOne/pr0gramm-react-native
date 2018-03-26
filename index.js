@@ -1,4 +1,4 @@
 import { AppRegistry } from 'react-native';
-import App from './src/App';
+import Setup from './src/setup';
 
-AppRegistry.registerComponent('pr0gramm', () => App);
+AppRegistry.registerComponent('pr0gramm', Setup);

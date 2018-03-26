@@ -6,7 +6,43 @@ export default class Modal extends PureComponent {
     this.animated = new Animated.Value(0);
     this.animatedMargin = new Animated.Value(0);
 
-    this.panResponder = PanResponder.create({})
+    this.panResponder = PanResponder.create({
+      onMoveShouldSetPanResponder: (evt, gestureState) => {
+        return true
+      },
+
+      onPanResponderMove: (evt, gestureState) => {
+        /**
+         * dx - negative value when moving left from initial position, positive
+         * when moving right. Initial position is 0
+         *
+         * dy - negative when moving top from initial position, positive
+         * when moving bottom. Initial position is 0
+         *
+         * moveX, moveY - current screen touch pixel coordinates
+         *
+         **/
+        const { dy } = gestureState;
+
+        (dy > 0)? this.animated.setValue(dy): this.animatedMargin.setValue(dy)
+      },
+
+      onPanResponderRelease: (evt, gestureState) => {
+        const { dy } = gestureState;
+
+        //  TODO: Close modal
+
+        if (dy < -150) {
+          // Animate away over the top
+          Animated.parallel([Animated.timing(this.animated, {toValue: 400, duration: 150}), Animated.timing(this.animatedMargin, {toValue:0, duration: 150})]).start()
+        } else if (dy > -150 && dy < 150) {
+          // Return to initial position
+          Animated.parallel([Animated.timing(this.animated, {toValue: 0, duration: 150}), Animated.timing(this.animatedMargin, {toValue: 0, duration: 150})]).start()
+        } else if (dy > 150) {
+          Animated.parallel([Animated.timing(this.animated, {toValue: 400, duration: 300})]).start()
+        }
+      }
+    })
 
   }
 

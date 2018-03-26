@@ -10,13 +10,47 @@ import {
   StyleSheet,
   FlatList,
   Image,
-  View
+  View,
 } from 'react-native';
+
+import { graphql } from 'react-apollo'
+import gql from 'graphql-tag'
 
 import Modal from './Modal'
 
-type Props = {};
-export default class App extends Component<Props> {
+// http://pr0gramm.com/api/items/get?older=275534&flags=1&promoted=1
+const GET_ITEMS = gql`
+  query($older: Int, $flags: Int, $promoted: Int, $pathFunction: any) {
+    items(older: $older, flags: $flags, promoted: $promoted)
+    @rest(type: "Items", pathBuilder: $pathFunction) {
+      atEnd
+      atStart
+      items {
+        id
+        thumb
+      }
+    }
+  }
+`;
+
+function _pathBuilder(variables) {
+  const qs = Object.keys(
+    variables,
+  ).reduce((acc, key) => {
+    if (variables[key] === null || variables[key] === undefined) {
+      return acc;
+    }
+    if (acc === '') {
+      return '?' + key + '=' + String(variables[key]);
+    }
+    return (
+      acc + '&' + key + '=' + String(variables[key])
+    );
+  }, '');
+  return 'items/get' + qs;
+}
+
+class App extends Component {
   constructor() {
     super();
 
@@ -30,7 +64,9 @@ export default class App extends Component<Props> {
   }
 
   componentDidMount() {
-    this._updateItems()
+    // this._updateItems();
+
+    console.log('ZIS: ', this)
   }
 
   async _updateItems() {
@@ -53,7 +89,6 @@ export default class App extends Component<Props> {
   }
 
   _toggleModal() {
-    console.log('TOGGLED: ', this.state);
     this.setState({ isModalVisible: !this.state.isModalVisible })
   }
 
@@ -61,6 +96,7 @@ export default class App extends Component<Props> {
     return item.id
   }
 
+  // http://thumb.pr0gramm.com/2017/12/19/97669f16cd0a1b6a.jpg
   _renderItem({ item }) {
     return(
       <TouchableOpacity onPress={this._toggleModal} style={styles.imageContainer}>
@@ -73,6 +109,8 @@ export default class App extends Component<Props> {
   }
 
   _onEndReached() {
+    // TODO: GQL querry with latest item
+
     const { items: stateItems } = this.state;
     const { id } = stateItems[stateItems.length - 1];
     const items = this._fetchItems({ order: id });
@@ -86,8 +124,8 @@ export default class App extends Component<Props> {
   render() {
     return (
       <View style={styles.container}>
-        { this.state.items &&
-          <FlatList data={this.state.items}
+        { this.props.items &&
+          <FlatList data={this.props.items.items}
                     numColumns={3}
                     keyExtractor={this._keyExtractor}
                     renderItem={this._renderItem}
@@ -120,3 +158,28 @@ const styles = StyleSheet.create({
     margin: 1
   },
 });
+
+export default graphql(GET_ITEMS, {
+  props: ({ data: { loading, error, items }}) => {
+    if (loading) {
+      return { loading: loading }
+    }
+
+    if (error) {
+      return { error: error }
+    }
+
+    return {
+      items: items,
+      loading: false,
+    }
+  },
+  options: (props) => ({
+    variables: {
+      older: 275534,
+      flags: 1,
+      promoted: 1,
+      pathFunction: _pathBuilder
+    }
+  }),
+})(App);
